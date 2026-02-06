@@ -5,6 +5,23 @@ const GITHUB_API_BASE = 'https://api.github.com';
 const MAX_DEPTH = 5;
 
 /**
+ * Get GitHub API headers with optional authentication
+ */
+function getGitHubHeaders() {
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+  };
+
+  // Add authentication token if available
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+/**
  * Parse GitHub URL and extract owner and repository name
  */
 export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
@@ -39,7 +56,10 @@ export async function getRepositoryMetadata(
   repo: string
 ): Promise<RepoMetadata> {
   try {
-    const response = await axios.get(`${GITHUB_API_BASE}/repos/${owner}/${repo}`);
+    const response = await axios.get(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}`,
+      { headers: getGitHubHeaders() }
+    );
     const data = response.data;
 
     return {
@@ -80,7 +100,7 @@ export async function fetchRepositoryContents(
 
     try {
       const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/contents/${path}`;
-      const response = await axios.get(url);
+      const response = await axios.get(url, { headers: getGitHubHeaders() });
       const items = Array.isArray(response.data) ? response.data : [response.data];
 
       for (const item of items) {
@@ -103,7 +123,7 @@ export async function fetchRepositoryContents(
 
           // Fetch file content
           try {
-            const fileResponse = await axios.get(item.url);
+            const fileResponse = await axios.get(item.url, { headers: getGitHubHeaders() });
             const content = fileResponse.data.content
               ? Buffer.from(fileResponse.data.content, 'base64').toString('utf-8')
               : '';
